@@ -1,0 +1,8 @@
+---
+# Playbook to create MySql
+
+- name: Create MySQL
+  hosts: localhost
+  gather_facts: false
+  roles:
+      - mysql
