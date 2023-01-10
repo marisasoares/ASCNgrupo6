@@ -1,0 +1,70 @@
+---
+- name: Get mySQL 
+  kubernetes.core.k8s_info:
+    kind: Deployment
+    label_selectors:
+      - app = mysql
+  register: mysql
+
+
+- name: Get ghost
+  kubernetes.core.k8s_info:
+    kind: Deployment
+    label_selectors:
+      - app = ghost
+  register: ghost
+
+
+- name: Stop the MySQL service
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Service
+    namespace: default
+    name: ghost-mysql
+    state: absent
+    wait: true
+
+
+- name: Undeploy mySQL
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Deployment
+    namespace: default
+    name: "{{mysql.resources[0].metadata.name}}"
+    state: absent
+    wait: true
+  when: mysql.resources[0] is defined
+
+
+- name: Undeploy ghost service
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Service
+    namespace: default
+    name: ghost-service
+    state: absent
+    continue_on_error: yes
+    wait: true
+
+
+
+- name: Undeploy ghost
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Deployment
+    namespace: default
+    name: "{{ ghost.resources[0].metadata.name }}"
+    state: absent
+    wait: true
+  when: ghost.resources[0] is defined
+
+
+- name: Remove PVC
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: PersistentVolumeClaim
+    namespace: default
+    name: mysql-pv-claim
+    state: absent
+    wait: true
+  when : delete_data is defined and {{delete_data}}==true

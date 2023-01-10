@@ -72,10 +72,6 @@
                   - containerPort: 2368
 
 
-
-
-- debug: var=output
-
 - name: Use K8s_info to get the current service
   kubernetes.core.k8s_info:
     api_version: v1
@@ -87,15 +83,14 @@
   retries: 10 
   delay: 5
 
-- debug: var=ghost_service
-- debug: var=ghost_service.resources[0].status.loadBalancer.ingress[0].ip 
-
-
-
 - name: replace line
   lineinfile: 
     path: inventory/gcp.yml
     regexp: '^(\s*ghost_ip:)' 
     line: '\1 {{ ghost_service.resources[0].status.loadBalancer.ingress[0].ip }}'
     backrefs: yes
+
+- debug: var=ghost_service.resources[0].status.loadBalancer.ingress[0].ip 
+
+
 
