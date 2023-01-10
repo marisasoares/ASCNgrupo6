@@ -13,11 +13,26 @@ all:
   gcp_disk_size_gb: 100                # Can be changed if necessary
   gcp_initial_node_count: 2            # Number of nodes to create. Can be changed if necessary
 
-
   # APP variables
-  ghost_ip: <GHOST_SERVICE_IP>     # Needs to be updated
-  ghost_port: <GHOST_PORT>         # Needs to be updated
+  ghost_ip: 34.123.27.150
+  ghost_port: 80        # Needs to be updated
 
+  ghost_version: "5.14.1"
+  ghost_image: "ghost:{{ghost_version}}"
+  ghost_replicas: 1
+  ghost_service_type: LoadBalancer
+
+
+  mysql_version: "8.0"
+  mysql_image: "mysql:{{ mysql_version }}"
+  mysql_replicas: 1
+  mysql_port: 80
+
+  database_name: "ghost"
+  database_user: "benjamim"
+  database_password: "password"
+  
+  #$ANSIBLE_VAULT;1.1;AES256623636363338363038646139646236623938373461346533653363306538316461613331643463303636616435613038663732613961363733386231626466340a343762633162373964633263356535366330356136393834663232616336306530316130373364333962646362373337316534636133353539343231306633650a6263666530613037396538343665346462303637363434333761636531613538"
 
   # Additional variables
-  # ..
+

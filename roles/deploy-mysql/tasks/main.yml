@@ -1,0 +1,95 @@
+---
+- name: Create Service
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      api_version: v1
+      kind: Service
+      metadata:
+        name: ghost-mysql
+        namespace: default
+        labels:
+          app: ghost
+          tier: mysql
+      spec:
+        type: ClusterIP
+        ports:
+          - targetPort: 3306
+            port: 3306
+        selector:
+          app: ghost
+          tier: mysql
+    wait: true
+
+- name: Create PVC
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      api_version: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: mysql-pv-claim
+        namespace: default
+        labels:
+          app: ghost
+      spec: 
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+    wait: true
+
+- name: Deploy MySQL
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      api_version: apps/v1
+      kind: Deployment
+      metadata:
+        name: mysql-deployment
+        namespace: default
+        labels:
+          app: ghost
+      spec:
+        selector:
+          matchLabels:
+            app: ghost
+            tier: mysql
+        strategy:
+          type: Recreate
+        template:
+          metadata:
+            labels: 
+              app: ghost
+              tier: mysql
+          spec:
+            containers:
+            - name: mysql
+              image: mysql:latest
+              env: # The variables below could be set on a ConfigMap object
+              - name: MYSQL_ALLOW_EMPTY_PASSWORD
+                value: "true"
+              - name: MYSQL_DATABASE
+                value: "{{database_name}}"
+              - name: MYSQL_USER
+                value: "{{database_user}}"
+              - name: MYSQL_PASSWORD
+                value: "{{database_password}}"   
+              ports:
+              - containerPort: 3306
+                name: mysql
+              volumeMounts:
+              - name: mysql-persistent-storage
+                mountPath: /var/lib/mysql
+            volumes:
+            - name: mysql-persistent-storage
+              persistentVolumeClaim:
+                claimName: mysql-pv-claim
+    wait: true
+
+                
+# - name: Wait for sql pods become ready
+#   shell: "kubectl wait --namespace=default --for=condition=Ready pods -l app=mysql,tier=database --timeout=600s"
+#   register: control_plane_pods_ready
+

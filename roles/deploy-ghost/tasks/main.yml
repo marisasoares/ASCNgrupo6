@@ -1,0 +1,101 @@
+---
+
+- debug: var=database_name
+- debug: var=database_user
+- debug: var=database_password
+
+
+- name: Expose Ghost Service
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: ghost-service
+        namespace: default
+        labels:
+          app: ghost
+          tier: app
+      spec:
+        type: LoadBalancer 
+        selector:
+          app: ghost
+        ports:
+          # By default and for convenience, the `targetPort` is set to the same value as the `port` field.
+          - targetPort: 2368 # port that containers are listening on
+            port: 80 # port exposed internally in the cluster
+            # Optional field
+            # By default and for convenience, the Kubernetes control plane will allocate a port from a range (default: 30000-32767)
+            #nodePort: 30007 # a static port assigned on each the node
+
+
+# Deployment for deploying Ghost
+- name: Deploy Ghost
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      api_version: apps/v1
+      kind: Deployment
+      metadata:
+        name: ghost
+        namespace: default
+        labels:
+          app: ghost
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: ghost
+        template:
+          metadata:
+            labels:
+              app: ghost
+          spec:
+            containers:
+              - name: ghost
+                image: "{{ghost_image}}"
+                env:
+                  - name: "database__client"
+                    value: mysql
+                  - name: "database__connection__database"
+                    value: "{{database_name}}"
+                  - name: "database__connection__user"
+                    value: "{{database_user}}"
+                  - name: "database__connection__password"
+                    value: "{{database_password}}"
+                  - name: "database__connection__host"
+                    value: ghost-mysql
+                  - name: url
+                    value: http://{{ ghost_ip }}:{{ ghost_port }}/
+                ports:
+                  - containerPort: 2368
+
+
+
+
+- debug: var=output
+
+- name: Use K8s_info to get the current service
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Service
+    name: ghost-service
+    namespace: default
+  register: ghost_service
+  until: "ghost_service.resources[0].status.loadBalancer.ingress is defined"
+  retries: 10 
+  delay: 5
+
+- debug: var=ghost_service
+- debug: var=ghost_service.resources[0].status.loadBalancer.ingress[0].ip 
+
+
+
+- name: replace line
+  lineinfile: 
+    path: inventory/gcp.yml
+    regexp: '^(\s*ghost_ip:)' 
+    line: '\1 {{ ghost_service.resources[0].status.loadBalancer.ingress[0].ip }}'
+    backrefs: yes
+

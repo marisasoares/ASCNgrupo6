@@ -1,16 +1,19 @@
 ---
+- name: Create a namespace
+  hosts: localhost
+  become: no
+  roles:
+    - namespace
+
 # Playbook to deploy Ghost and its components
-
-# Deploy MySQL 
-- name: Create Ghost MySQL
+- name: Database configuration
   hosts: localhost
-  gather_facts: false
+  become: no    #privilege escalation
   roles:
-      - mysql
+    - deploy-mysql
 
-# Deploy Ghost 
-- name: Create Ghost MySQL
+- name: Ghost configuration
   hosts: localhost
-  gather_facts: false
+  become: no    #privilege escalation
   roles:
-      - ghost
+    - deploy-ghost

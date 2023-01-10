@@ -1,0 +1,8 @@
+---
+# https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_module.html
+- name: Create a k8s namespace
+  kubernetes.core.k8s:
+    name: default
+    api_version: v1
+    kind: Namespace
+    state: present
