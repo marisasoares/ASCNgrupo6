@@ -1,0 +1,6 @@
+---
+- name: Create Dashboard
+  hosts: localhost
+  become: no
+  roles:
+    - monitoring

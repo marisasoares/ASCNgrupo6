@@ -3,7 +3,7 @@
   kubernetes.core.k8s_info:
     kind: Deployment
     label_selectors:
-      - app = mysql
+      - tier = mysql
   register: mysql
 
 

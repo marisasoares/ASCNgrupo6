@@ -1,4 +1,11 @@
 ---
+- name: Get mySQL pod
+  kubernetes.core.k8s_info:
+    namespace: default
+    kind: Pod
+    label_selectors:
+      - tier=mysql
+  register: mysql_pod
 
 - debug: var=database_name
 - debug: var=database_user
@@ -28,6 +35,25 @@
             # Optional field
             # By default and for convenience, the Kubernetes control plane will allocate a port from a range (default: 30000-32767)
             #nodePort: 30007 # a static port assigned on each the node
+
+
+- name: Use K8s_info to get the current service
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Service
+    name: ghost-service
+    namespace: default
+  register: ghost_service
+  until: "ghost_service.resources[0].status.loadBalancer.ingress is defined"
+  retries: 10 
+  delay: 5
+
+- name: Change the IP
+  lineinfile: 
+    path: inventory/gcp.yml
+    regexp: '^(\s*ghost_ip:)' 
+    line: '\1 {{ ghost_service.resources[0].status.loadBalancer.ingress[0].ip }}'
+    backrefs: yes
 
 
 # Deployment for deploying Ghost
@@ -68,29 +94,32 @@
                     value: ghost-mysql
                   - name: url
                     value: http://{{ ghost_ip }}:{{ ghost_port }}/
+                  - name:  mail__transport
+                    value: SMTP
+                  - name: mail__options__secure
+                    value: "false"
+                  - name: mail__options__service
+                    value: "Mailtrap"
+                  - name: mail__options__host
+                    value: "smtp.mailtrap.io"
+                  - name: mail__options__port
+                    value: "587"
+                  - name: mail__options__auth__user
+                    value: "5a89e96ba47886"
+                  - name: mail__options__auth__pass
+                    value: "77ed76c048b8e8"           
                 ports:
                   - containerPort: 2368
 
+# Email configuration seen at:
+# https://forum.ghost.org/t/how-to-setup-basic-smtp-for-ghost/29166
 
-- name: Use K8s_info to get the current service
-  kubernetes.core.k8s_info:
-    api_version: v1
-    kind: Service
-    name: ghost-service
+- name: Insert Admin in database
+  kubernetes.core.k8s_exec:
     namespace: default
-  register: ghost_service
-  until: "ghost_service.resources[0].status.loadBalancer.ingress is defined"
-  retries: 10 
-  delay: 5
-
-- name: replace line
-  lineinfile: 
-    path: inventory/gcp.yml
-    regexp: '^(\s*ghost_ip:)' 
-    line: '\1 {{ ghost_service.resources[0].status.loadBalancer.ingress[0].ip }}'
-    backrefs: yes
-
-- debug: var=ghost_service.resources[0].status.loadBalancer.ingress[0].ip 
+    pod: "{{ mysql_pod.resources[0].metadata.name | regex_replace('[\"]') }}"
+    command: "mysql -u '{{database_user}}' -p'{{database_password}}' -D '{{database_name}}' -e \" update users set name='ascn', password='{{ admin_password }}', email='ascn@example.com', status='active' where id=1\";"
 
 
-
+- debug:
+    msg: "Ghost app available at: http://{{ ghost_service.resources[0].status.loadBalancer.ingress[0].ip }}:{{ ghost_port }}/"
