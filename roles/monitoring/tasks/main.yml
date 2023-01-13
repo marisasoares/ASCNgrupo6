@@ -2,3 +2,21 @@
 - name: Create dashboards
   ansible.builtin.shell:
     gcloud monitoring dashboards create --config-from-file=dashboard.json
+
+# - name: Get Ghost pod
+#   kubernetes.core.k8s_info:
+#     namespace: default
+#     kind: Pod
+#     label_selectors:
+#       - app=ghost
+#   register: ghost_pod
+
+# - name: Execute
+#   ansible.builtin.shell:
+#     kubectl exec -i -t "{{ ghost_pod.resources[0].metadata.name | regex_replace('[\"]') }}" -- gcloud monitoring dashboards create --config-from-file=dashboard.json
+
+# # - name: Execute a command
+#   kubernetes.core.k8s_exec:
+#     namespace: default
+#     pod: "{{ ghost_pod.resources[0].metadata.name | regex_replace('[\"]') }}"
+#     command: gcloud monitoring dashboards create --config-from-file=dashboard.json

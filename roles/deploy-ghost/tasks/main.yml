@@ -37,7 +37,7 @@
             #nodePort: 30007 # a static port assigned on each the node
 
 
-- name: Use K8s_info to get the current service
+- name: Get ghost service
   kubernetes.core.k8s_info:
     api_version: v1
     kind: Service
@@ -113,6 +113,11 @@
 
 # Email configuration seen at:
 # https://forum.ghost.org/t/how-to-setup-basic-smtp-for-ghost/29166
+
+- name: Wait for databse creation
+  ansible.builtin.wait_for:
+    timeout: 20
+
 
 - name: Insert Admin in database
   kubernetes.core.k8s_exec:
